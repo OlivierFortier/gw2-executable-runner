@@ -124,7 +124,7 @@ fn setup_keybinds() -> Result<()> {
     register_keybind_with_string(
         "GW2_EXECUTABLE_LOADER_KEYBIND",
         main_window_keybind_handler,
-        "ALT+SHIFT+1",
+        "ALT+SHIFT+2",
     )
     .revert_on_unload();
 
