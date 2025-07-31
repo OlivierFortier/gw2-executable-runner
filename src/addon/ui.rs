@@ -1,7 +1,7 @@
 /*!
 # Nexus Addon UI Module
 
-This module contains all Nexus-specific UI rendering logic and components for the Guild Wars 2 overlay addon.
+This module contains all Nexus-specific UI rendering logic and components for the Guild Wars 2 executable loader addon.
 
 ## Components
 
@@ -37,7 +37,7 @@ pub fn setup_main_window_rendering() {
 pub fn render_main_window(ui: &Ui) {
     let mut is_open = IS_WINDOW_OPEN.load(Ordering::Relaxed);
     if is_open {
-        Window::new("DX11 Overlay Loader")
+        Window::new("Gw2 Executable Loader")
             .opened(&mut is_open)
             .size([500.0, 400.0], nexus::imgui::Condition::FirstUseEver)
             .collapsible(false)

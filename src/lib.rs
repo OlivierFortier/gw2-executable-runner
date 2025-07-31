@@ -7,7 +7,8 @@ nexus::export! {
     signature: -0x7A8B9C2A,
     load: addon::load,
     unload: addon::unload,
-    flags: AddonFlags::IsVolatile,
-    provider: nexus::UpdateProvider::None,
+    flags: AddonFlags::None,
+    provider: nexus::UpdateProvider::GitHub,
+    update_link: "https://github.com/OlivierFortier/gw2-executable-loader",
     log_filter: "trace"
 }

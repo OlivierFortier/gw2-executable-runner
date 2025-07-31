@@ -20,14 +20,14 @@ use crate::addon::{NexusError, Result, manager::ExeManager, ui};
 
 /// Nexus addon load function - handles initialization of all nexus-specific functionality
 pub fn load() {
-    log::info!("Loading Nexus DX11 overlay loader addon");
+    log::info!("Loading Gw2 Executable Loader addon");
 
     if let Err(e) = init_addon() {
         log::error!("Failed to initialize nexus addon: {e}");
         return;
     }
 
-    log::info!("Nexus DX11 overlay loader addon loaded successfully");
+    log::info!("Gw2 Executable Loaderr addon loaded successfully");
 }
 
 /// Internal initialization function with proper error handling
@@ -36,7 +36,7 @@ fn init_addon() -> Result<()> {
     // Create the addon dir if it doesn't exist
     use std::fs;
 
-    let addon_dir = get_addon_dir("Nexus DX11 overlay loader").ok_or_else(|| {
+    let addon_dir = get_addon_dir("Gw2 Executable Loader").ok_or_else(|| {
         NexusError::ManagerInitialization("Failed to get addon directory".to_string())
     })?;
 
@@ -79,9 +79,9 @@ fn load_addon_textures() -> Result<()> {
 
     // Note: load_texture_from_memory doesn't return a Result, so we assume success
     // In a real implementation, we might want to add validation
-    load_texture_from_memory("DX11_OVERLAY_LOADER_ICON", icon, Some(receive_texture));
+    load_texture_from_memory("GW2_EXECUTABLE_LOADER_ICON", icon, Some(receive_texture));
     load_texture_from_memory(
-        "DX11_OVERLAY_LOADER_ICON_HOVER",
+        "GW2_EXECUTABLE_LOADER_ICON_HOVER",
         icon_hover,
         Some(receive_texture),
     );
@@ -95,11 +95,11 @@ fn setup_quick_access() -> Result<()> {
     // Note: add_quick_access doesn't return a Result, so we assume success
     // In a real implementation, we might want to add validation
     add_quick_access(
-        "DX11_OVERLAY_LOADER_SHORTCUT",
-        "DX11_OVERLAY_LOADER_ICON",
-        "DX11_OVERLAY_LOADER_ICON_HOVER",
-        "DX11_OVERLAY_LOADER_KEYBIND",
-        "Dx11 overlay loader",
+        "GW2_EXECUTABLE_LOADER_SHORTCUT",
+        "GW2_EXECUTABLE_LOADER_ICON",
+        "GW2_EXECUTABLE_LOADER_ICON_HOVER",
+        "GW2_EXECUTABLE_LOADER_KEYBIND",
+        "Gw2 executable loader",
     )
     .revert_on_unload();
 
@@ -122,7 +122,7 @@ fn setup_keybinds() -> Result<()> {
     // Note: register_keybind_with_string doesn't return a Result, so we assume success
     // In a real implementation, we might want to add validation
     register_keybind_with_string(
-        "DX11_OVERLAY_LOADER_KEYBIND",
+        "GW2_EXECUTABLE_LOADER_KEYBIND",
         main_window_keybind_handler,
         "ALT+SHIFT+1",
     )
@@ -134,13 +134,13 @@ fn setup_keybinds() -> Result<()> {
 
 /// Nexus addon unload function - handles cleanup of all nexus-specific functionality
 pub fn unload() {
-    log::info!("Unloading Nexus DX11 overlay loader addon");
+    log::info!("Unloading Gw2 executable loader addon");
 
     if let Err(e) = cleanup_addon() {
         log::error!("Error during nexus addon cleanup: {e}");
     }
 
-    log::info!("Nexus DX11 overlay loader addon unloaded");
+    log::info!("Gw2 executable loader addon unloaded");
 }
 
 /// Internal cleanup function with proper error handling
