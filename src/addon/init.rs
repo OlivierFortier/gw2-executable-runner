@@ -70,8 +70,8 @@ fn init_addon() -> Result<()> {
 
 /// Loads the addon textures from embedded resources
 fn load_addon_textures() -> Result<()> {
-    let icon = include_bytes!("../../images/64p_no_bg_3_white.png");
-    let icon_hover = include_bytes!("../../images/64p_no_bg_3.png");
+    let icon = include_bytes!("../../images/64p_exe_loader.png");
+    let icon_hover = include_bytes!("../../images/64p_exe_loader.png");
 
     let receive_texture: RawTextureReceiveCallback = texture_receive!(|id, _texture| {
         log::info!("texture {id} loaded");
