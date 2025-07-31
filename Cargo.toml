@@ -1,19 +1,24 @@
 [package]
-name = "gw2-binary-loader"
+name = "gw2-executable-loader"
 version = "0.1.0"
 edition = "2024"
 authors = ["Deathmore.3741"]
 description = "Load and run exe files as subprocesses from inside Gw2. Very useful for SteamOS/Bazzite in game mode as it launches under the same wine binary and prefix as Gw2."
 
 [lib]
-name = "gw2-binary-loader"
-path = "src/lib.rs"
+name = "gw2_executable_loader"
 crate-type = ["cdylib"]
 
 [dependencies]
 retour = { version = "0.4.0-alpha.3", features = ["static-detour"] }
 log = "0.4.21"
-nexus = { git = "https://github.com/zerthox/nexus-rs", features = ["log", "log_filter", "arc", "hook", "strum"] }
+nexus = { git = "https://github.com/zerthox/nexus-rs", features = [
+    "log",
+    "log_filter",
+    "arc",
+    "hook",
+    "strum",
+] }
 rfd = "0.15"
 sysinfo = "0.36.1"
 

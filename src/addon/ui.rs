@@ -2,25 +2,6 @@
 # Nexus Addon UI Module
 
 This module contains all Nexus-specific UI rendering logic and components for the Guild Wars 2 overlay addon.
-It separates UI concerns from business logic, improving maintainability and testability.
-
-## Usage
-
-Register the main window rendering callback during initialization:
-
-```rust
-use crate::nexus_addon::ui::setup_main_window_rendering;
-
-setup_main_window_rendering();
-```
-
-Toggle the main window visibility using the provided function:
-
-```rust
-use crate::nexus_addon::ui::toggle_window;
-
-toggle_window();
-```
 
 ## Components
 
@@ -33,14 +14,13 @@ All UI state is managed via atomic flags and global references.
 
 */
 
-
-use std::sync::atomic::{AtomicBool, Ordering};
+use crate::addon::manager::{EXE_MANAGER, ExeManager, open_file_dialog};
 use nexus::{
-    imgui::{Window, Ui},
     gui::register_render,
+    imgui::{Ui, Window},
     render,
 };
-use crate::nexus_addon::manager::{ExeManager, EXE_MANAGER, open_file_dialog};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Global state for tracking if the main window is open
 pub static IS_WINDOW_OPEN: AtomicBool = AtomicBool::new(false);
@@ -53,7 +33,7 @@ pub fn setup_main_window_rendering() {
     register_render(nexus::gui::RenderType::Render, main_window).revert_on_unload();
 }
 
-/// Renders the main DX11 Overlay Loader window
+/// Renders the main window
 pub fn render_main_window(ui: &Ui) {
     let mut is_open = IS_WINDOW_OPEN.load(Ordering::Relaxed);
     if is_open {
@@ -99,7 +79,7 @@ fn render_add_executable_section(ui: &Ui, exe_manager: &mut ExeManager) {
                 log::error!("Failed to add executable: {e}");
             }
         }
-            }
+    }
 
     ui.same_line();
     ui.text("Click 'Browse' to select an executable file");
@@ -123,7 +103,15 @@ fn render_executable_list(ui: &Ui, exe_manager: &mut ExeManager) {
 
         let _id = ui.push_id(i as i32);
 
-        render_executable_item(ui, exe_path, is_running, &mut to_launch, &mut to_stop, &mut to_remove, i);
+        render_executable_item(
+            ui,
+            exe_path,
+            is_running,
+            &mut to_launch,
+            &mut to_stop,
+            &mut to_remove,
+            i,
+        );
     }
 
     // Handle actions after the loop to avoid borrowing conflicts
@@ -186,19 +174,19 @@ fn handle_executable_actions(
         if let Err(e) = exe_manager.stop_exe(&path) {
             log::error!("Failed to stop executable: {e}");
         }
-        }
+    }
 
     if let Some(path) = to_launch {
         if let Err(e) = exe_manager.launch_exe(&path) {
             log::error!("Failed to launch executable: {e}");
         }
-        }
+    }
 
     if let Some(index) = to_remove {
         if let Err(e) = exe_manager.remove_exe(index) {
             log::error!("Failed to remove executable: {e}");
         }
-        }
+    }
 }
 
 /// Renders the control buttons section

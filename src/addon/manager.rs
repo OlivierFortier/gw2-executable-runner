@@ -1,7 +1,7 @@
 /*!
 # Executable Manager Module
 
-Handles all executable management functionality for the Nexus Guild Wars 2 addon, including:
+Handles all executable management functionality ,including:
 - Persistent storage of executable paths
 - Launching and stopping processes
 - Process tracking and cleanup
@@ -32,7 +32,6 @@ All fallible operations return `Result<T, NexusError>`. Errors are logged using 
 
 */
 
-
 use std::{
     collections::HashMap,
     fs::{read_to_string, write},
@@ -41,7 +40,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::nexus_addon::{NexusError, Result};
+use crate::addon::{NexusError, Result};
 
 /**
  * Manages executable files and their running processes.
@@ -140,7 +139,9 @@ impl ExeManager {
      */
     pub fn add_exe(&mut self, path: String) -> Result<()> {
         if path.trim().is_empty() {
-            return Err(NexusError::FileOperation("Cannot add empty executable path".to_string()));
+            return Err(NexusError::FileOperation(
+                "Cannot add empty executable path".to_string(),
+            ));
         }
 
         if self.exe_paths.contains(&path) {
@@ -165,7 +166,11 @@ impl ExeManager {
      */
     pub fn remove_exe(&mut self, index: usize) -> Result<()> {
         if index >= self.exe_paths.len() {
-            return Err(NexusError::FileOperation(format!("Invalid index {} for exe list of length {}", index, self.exe_paths.len())));
+            return Err(NexusError::FileOperation(format!(
+                "Invalid index {} for exe list of length {}",
+                index,
+                self.exe_paths.len()
+            )));
         }
 
         let path = self.exe_paths.remove(index);
@@ -197,7 +202,9 @@ impl ExeManager {
         use std::os::windows::process::CommandExt;
 
         if self.running_processes.contains_key(path) {
-            return Err(NexusError::ProcessLaunch(format!("Process is already running: {path}")));
+            return Err(NexusError::ProcessLaunch(format!(
+                "Process is already running: {path}"
+            )));
         }
 
         match Command::new(path)
@@ -242,7 +249,9 @@ impl ExeManager {
                 }
             }
         } else {
-            Err(NexusError::ProcessStop(format!("Process is not running: {path}")))
+            Err(NexusError::ProcessStop(format!(
+                "Process is not running: {path}"
+            )))
         }
     }
 
@@ -298,7 +307,10 @@ impl ExeManager {
         }
 
         if !errors.is_empty() {
-            return Err(NexusError::ProcessStop(format!("Failed to stop some processes: {}", errors.join(", "))));
+            return Err(NexusError::ProcessStop(format!(
+                "Failed to stop some processes: {}",
+                errors.join(", ")
+            )));
         }
 
         log::info!("Successfully stopped all running executables");
