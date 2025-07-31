@@ -10,7 +10,7 @@ Handles all executable management functionality ,including:
 ## Usage Example
 
 ```rust
-use crate::nexus_addon::manager::ExeManager;
+use crate::addon::manager::ExeManager;
 use std::path::PathBuf;
 
 let addon_dir = PathBuf::from("path/to/addon");
