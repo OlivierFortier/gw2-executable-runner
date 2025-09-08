@@ -1,7 +1,6 @@
 /*!
-# Nexus Addon UI Module
 
-This module contains all Nexus-specific UI rendering logic and components for the Guild Wars 2 executable loader addon.
+This module contains all Nexus-specific UI rendering logic and components for the Guild Wars 2 executable runner addon.
 
 ## Components
 
@@ -10,11 +9,9 @@ This module contains all Nexus-specific UI rendering logic and components for th
 - Add executable dialog
 - Control buttons (Stop All, Running Count)
 
-All UI state is managed via atomic flags and global references.
-
 */
 
-use crate::addon::manager::{EXE_MANAGER, ExeManager, open_file_dialog};
+use crate::addon::manager::{open_file_dialog, ExeManager, Executable, EXE_MANAGER};
 use nexus::{
     gui::register_render,
     imgui::{Ui, Window},
@@ -37,7 +34,7 @@ pub fn setup_main_window_rendering() {
 pub fn render_main_window(ui: &Ui) {
     let mut is_open = IS_WINDOW_OPEN.load(Ordering::Relaxed);
     if is_open {
-        Window::new("Gw2 Executable Loader")
+        Window::new("Gw2 Executable Runner")
             .opened(&mut is_open)
             .size([500.0, 400.0], nexus::imgui::Condition::FirstUseEver)
             .collapsible(false)
@@ -65,7 +62,11 @@ fn render_window_content(ui: &Ui) {
 
 /// Renders the window header
 fn render_header(ui: &Ui) {
-    ui.text("DX11 Overlay Loader - Executable Manager");
+    ui.text("Gw2 Executable Runner");
+    ui.separator();
+    ui.text_wrapped("To start an executable, please select an executable file below.");
+    ui.text_wrapped("Then, launch executable with the 'Launch' button.");
+    ui.text_wrapped("You can make it launch automatically on startup by checking on the checkbox next to the executable.");
     ui.separator();
 }
 
@@ -98,12 +99,17 @@ fn render_executable_list(ui: &Ui, exe_manager: &mut ExeManager) {
     // Clone the paths to avoid borrowing issues
     let exe_paths = exe_manager.exe_paths().clone();
 
+    if exe_paths.is_empty() {
+        ui.text_colored([0.6, 0.6, 0.6, 1.0], "No executable configured");
+    }
+
     for (i, exe_path) in exe_paths.iter().enumerate() {
         let is_running = exe_manager.is_running(exe_path);
 
         let _id = ui.push_id(i as i32);
 
         render_executable_item(
+            exe_manager,
             ui,
             exe_path,
             is_running,
@@ -120,6 +126,7 @@ fn render_executable_list(ui: &Ui, exe_manager: &mut ExeManager) {
 
 /// Renders a single executable item in the list
 fn render_executable_item(
+    exe_manager: &mut ExeManager,
     ui: &Ui,
     exe_path: &str,
     is_running: bool,
@@ -128,11 +135,14 @@ fn render_executable_item(
     to_remove: &mut Option<usize>,
     index: usize,
 ) {
+
+    let exe: &Executable = exe_manager.executables().get(index).unwrap();
+
     // Status indicator
     if is_running {
-        ui.text_colored([0.0, 1.0, 0.0, 1.0], "●");
+        ui.text_colored([0.0, 1.0, 0.0, 1.0], "Running");
     } else {
-        ui.text_colored([0.5, 0.5, 0.5, 1.0], "●");
+        ui.text_colored([0.5, 0.5, 0.5, 1.0], "Not running");
     }
     ui.same_line();
 
@@ -145,6 +155,13 @@ fn render_executable_item(
     ui.text(&display_path);
 
     ui.same_line();
+
+    // Auto-launch checkbox
+    if ui.checkbox("Launch on startup", exe_manager.launch_on_startup(&exe)) {
+        if let Err(e) = exe_manager.save_settings() {
+            log::error!("Failed to save settings: {e}");
+        }
+    }
 
     // Launch/Stop button
     if is_running {

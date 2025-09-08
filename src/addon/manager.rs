@@ -7,29 +7,6 @@ Handles all executable management functionality ,including:
 - Process tracking and cleanup
 - File dialog integration for selecting executables
 
-## Usage Example
-
-```rust
-use crate::addon::manager::ExeManager;
-use std::path::PathBuf;
-
-let addon_dir = PathBuf::from("path/to/addon");
-let mut manager = ExeManager::new(addon_dir)?;
-
-// Add an executable
-manager.add_exe("C:\\Windows\\System32\\notepad.exe".to_string())?;
-
-// Launch an executable
-manager.launch_exe("C:\\Windows\\System32\\notepad.exe")?;
-
-// Stop all running executables
-manager.stop_all()?;
-```
-
-## Error Handling
-
-All fallible operations return `Result<T, NexusError>`. Errors are logged using the `log` crate.
-
 */
 
 use std::{
@@ -39,6 +16,8 @@ use std::{
     process::{Child, Command, Stdio},
     sync::{Arc, Mutex},
 };
+
+use serde::{Deserialize, Serialize};
 
 use crate::addon::{NexusError, Result};
 
@@ -53,6 +32,13 @@ pub struct ExeManager {
     exe_paths: Vec<String>,
     running_processes: HashMap<String, Child>,
     addon_dir: PathBuf,
+    executables: Vec<Executable>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Executable {
+    pub path: String,
+    pub launch_on_startup: bool,
 }
 
 impl ExeManager {
@@ -70,9 +56,14 @@ impl ExeManager {
             exe_paths: Vec::new(),
             running_processes: HashMap::new(),
             addon_dir,
+            executables: Vec::new(),
         };
         manager.load_exe_list()?;
         Ok(manager)
+    }
+
+    pub fn executables(&self) -> &Vec<Executable> {
+        &self.executables
     }
 
     /**
@@ -335,6 +326,14 @@ impl ExeManager {
      */
     pub fn running_count(&self) -> usize {
         self.running_processes.len()
+    }
+
+    pub(crate) fn save_settings(&self) -> Result<()> {
+        self.save_exe_list()
+    }
+
+    pub(crate) fn launch_on_startup(&self, executable: &mut Executable) -> &mut bool {
+        todo!()
     }
 }
 

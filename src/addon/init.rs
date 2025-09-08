@@ -1,5 +1,4 @@
 /*!
-# Nexus Addon Initialization Module
 
 Handles initialization, resource loading, and cleanup for addon.
 Provides the main entry points for the addon lifecycle and orchestrates setup of UI, keybinds, quick access, and textures.
@@ -20,14 +19,14 @@ use crate::addon::{NexusError, Result, manager::ExeManager, ui};
 
 /// Nexus addon load function - handles initialization of all nexus-specific functionality
 pub fn load() {
-    log::info!("Loading Gw2 Executable Loader addon");
+    log::info!("Loading Gw2 Executable Runner addon");
 
     if let Err(e) = init_addon() {
         log::error!("Failed to initialize nexus addon: {e}");
         return;
     }
 
-    log::info!("Gw2 Executable Loaderr addon loaded successfully");
+    log::info!("Gw2 Executable Runner addon loaded successfully");
 }
 
 /// Internal initialization function with proper error handling
@@ -36,7 +35,7 @@ fn init_addon() -> Result<()> {
     // Create the addon dir if it doesn't exist
     use std::fs;
 
-    let addon_dir = get_addon_dir("Gw2 Executable Loader").ok_or_else(|| {
+    let addon_dir = get_addon_dir("gw2_executable_runner").ok_or_else(|| {
         NexusError::ManagerInitialization("Failed to get addon directory".to_string())
     })?;
 
@@ -79,9 +78,9 @@ fn load_addon_textures() -> Result<()> {
 
     // Note: load_texture_from_memory doesn't return a Result, so we assume success
     // In a real implementation, we might want to add validation
-    load_texture_from_memory("GW2_EXECUTABLE_LOADER_ICON", icon, Some(receive_texture));
+    load_texture_from_memory("GW2_EXECUTABLE_RUNNER_ICON", icon, Some(receive_texture));
     load_texture_from_memory(
-        "GW2_EXECUTABLE_LOADER_ICON_HOVER",
+        "GW2_EXECUTABLE_RUNNER_ICON_HOVER",
         icon_hover,
         Some(receive_texture),
     );
@@ -95,11 +94,11 @@ fn setup_quick_access() -> Result<()> {
     // Note: add_quick_access doesn't return a Result, so we assume success
     // In a real implementation, we might want to add validation
     add_quick_access(
-        "GW2_EXECUTABLE_LOADER_SHORTCUT",
-        "GW2_EXECUTABLE_LOADER_ICON",
-        "GW2_EXECUTABLE_LOADER_ICON_HOVER",
-        "GW2_EXECUTABLE_LOADER_KEYBIND",
-        "Gw2 executable loader",
+        "GW2_EXECUTABLE_RUNNER_SHORTCUT",
+        "GW2_EXECUTABLE_RUNNER_ICON",
+        "GW2_EXECUTABLE_RUNNER_ICON_HOVER",
+        "GW2_EXECUTABLE_RUNNER_KEYBIND",
+        "Gw2 executable runner",
     )
     .revert_on_unload();
 
@@ -122,7 +121,7 @@ fn setup_keybinds() -> Result<()> {
     // Note: register_keybind_with_string doesn't return a Result, so we assume success
     // In a real implementation, we might want to add validation
     register_keybind_with_string(
-        "GW2_EXECUTABLE_LOADER_KEYBIND",
+        "GW2_EXECUTABLE_RUNNER_KEYBIND",
         main_window_keybind_handler,
         "ALT+SHIFT+2",
     )
@@ -134,13 +133,13 @@ fn setup_keybinds() -> Result<()> {
 
 /// Nexus addon unload function - handles cleanup of all nexus-specific functionality
 pub fn unload() {
-    log::info!("Unloading Gw2 executable loader addon");
+    log::info!("Unloading Gw2 executable runner addon");
 
     if let Err(e) = cleanup_addon() {
         log::error!("Error during nexus addon cleanup: {e}");
     }
 
-    log::info!("Gw2 executable loader addon unloaded");
+    log::info!("Gw2 executable runner addon unloaded");
 }
 
 /// Internal cleanup function with proper error handling

@@ -1,9 +1,9 @@
-# GW2 Executable Loader
+# GW2 Executable Runner
 
-A Rust-based executable loader for Nexus, designed to work with Blish HUD and other similar tools. This project allows dynamic loading and management of executables from the Guild Wars 2 environment in an easy way. It is particularly useful for linux users who want to run custom addons or tools alongside the game.
+A Rust-based executable runner for Nexus, designed to work with Blish HUD and other similar tools. This project allows dynamic running and management of executables from the Guild Wars 2 environment in an easy way. It is particularly useful for linux users who want to run custom addons or tools alongside the game.
 
 ## Features
-- Dynamic loading and initialization of executables inside the GW2 environment
+- Dynamic running and initialization of executables inside the GW2 environment
 - UI for selecting and managing executables
 
 ## Project Structure
