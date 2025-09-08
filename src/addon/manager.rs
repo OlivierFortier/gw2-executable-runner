@@ -21,12 +21,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::addon::{NexusError, Result};
 
-/**
- * Manages executable files and their running processes.
- *
- * Stores a list of executable paths, tracks running processes, and provides methods for launching, stopping,
- * and cleaning up executables. All operations return a `Result<T, NexusError>` for robust error handling.
- */
+/// Stores a list of executable paths, tracks running processes, and provides methods for launching, stopping,
+/// and cleaning up executables. All operations return a `Result<T, NexusError>` for robust error handling.
+/// Executable list is persisted in JSON format in the addon directory.
 #[derive(Debug)]
 pub struct ExeManager {
     running_processes: HashMap<String, Child>,
@@ -43,15 +40,13 @@ pub struct Executable {
 }
 
 impl ExeManager {
-    /**
-     * Creates a new ExeManager instance and loads the existing exe list from disk.
-     *
-     * # Arguments
-     * * `addon_dir` - Path to the addon directory containing exes.txt
-     *
-     * # Errors
-     * Returns `NexusError::FileOperation` if loading the exe list fails.
-     */
+    /// Creates a new ExeManager instance and loads the existing exe list from disk.
+    ///
+    /// # Arguments
+    /// * `addon_dir` - Path to the addon directory containing exes.json
+    ///
+    /// # Errors
+    /// Returns `NexusError::FileOperation` if loading the exe list fails.
     pub fn new(addon_dir: PathBuf) -> Result<Self> {
         let mut manager = Self {
             running_processes: HashMap::new(),
@@ -66,67 +61,65 @@ impl ExeManager {
         &self.executables
     }
 
-    /**
-     * Loads the executable list from the exes.txt file in the addon directory.
-     *
-     * # Errors
-     * Returns `NexusError::FileOperation` if reading the file fails.
-     */
+    /// Loads the executable list from the exes.json file in the addon directory.
+    ///
+    /// # Errors
+    /// Returns `NexusError::FileOperation` if reading the file fails.
     fn load_exe_list(&mut self) -> Result<()> {
         let mut exes_file = self.addon_dir.clone();
-        exes_file.push("exes.txt");
+        exes_file.push("exes.json");
 
         match read_to_string(&exes_file) {
             Ok(contents) => {
-                // Initialize the executables vector with default values
-                self.executables = contents
-                    .lines()
-                    .filter(|line| !line.trim().is_empty())
-                    .map(|line| Executable {
-                        path: line.trim().to_string(),
-                        launch_on_startup: false,
-                        is_running: false,
-                    })
-                    .collect();
-
-                log::info!("Loaded {} executables from exe list", self.executables.len());
-                Ok(())
+                match serde_json::from_str(&contents) {
+                    Ok(executables) => {
+                        self.executables = executables;
+                        log::info!("Loaded {} executables from exe list", self.executables.len());
+                        Ok(())
+                    }
+                    Err(e) => {
+                        let error_msg = format!("Failed to parse exe list from {:?}: {}", exes_file, e);
+                        log::error!("{}", error_msg);
+                        Err(NexusError::FileOperation(error_msg))
+                    }
+                }
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 log::info!("No existing exe list found, starting with empty list");
                 Ok(())
             }
             Err(e) => {
-                let error_msg = format!("Failed to read exe list from {exes_file:?}: {e}");
-                log::error!("{error_msg}");
+                let error_msg = format!("Failed to read exe list from {:?}: {}", exes_file, e);
+                log::error!("{}", error_msg);
                 Err(NexusError::FileOperation(error_msg))
             }
         }
     }
 
-    /**
-     * Saves the current executable list to the exes.txt file.
-     *
-     * # Errors
-     * Returns `NexusError::FileOperation` if writing to the file fails.
-     */
+    /// Saves the current executable list to the exes.json file.
+    ///
+    /// # Errors
+    /// Returns `NexusError::FileOperation` if writing to the file fails.
     fn save_exe_list(&self) -> Result<()> {
         let mut exes_file = self.addon_dir.clone();
-        exes_file.push("exes.txt");
+        exes_file.push("exes.json");
 
-        let content = self.executables
-            .iter()
-            .map(|exe| exe.path.clone())
-            .collect::<Vec<String>>()
-            .join("\n");
-        write(&exes_file, content).map_err(|e| {
-            let error_msg = format!("Failed to save exe list to {exes_file:?}: {e}");
-            log::error!("{error_msg}");
-            NexusError::FileOperation(error_msg)
-        })?;
-
-        log::debug!("Saved {} executables to exe list", self.executables.len());
-        Ok(())
+        match serde_json::to_string_pretty(&self.executables) {
+            Ok(content) => {
+                write(&exes_file, content).map_err(|e| {
+                    let error_msg = format!("Failed to save exe list to {:?}: {}", exes_file, e);
+                    log::error!("{}", error_msg);
+                    NexusError::FileOperation(error_msg)
+                })?;
+                log::debug!("Saved {} executables to exe list", self.executables.len());
+                Ok(())
+            }
+            Err(e) => {
+                let error_msg = format!("Failed to serialize exe list: {}", e);
+                log::error!("{}", error_msg);
+                Err(NexusError::FileOperation(error_msg))
+            }
+        }
     }
 
     /**

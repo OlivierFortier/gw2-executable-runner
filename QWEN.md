@@ -37,7 +37,7 @@ The addon integrates with the Nexus framework to provide a UI for selecting and 
 
 - Dynamic running and initialization of executables inside the GW2 environment
 - UI for selecting and managing executables
-- Persistent storage of executable paths in `exes.txt`
+- Persistent storage of executable paths in `exes.json` (JSON format)
 - Process tracking and cleanup
 - Keybind support (ALT+SHIFT+2 by default)
 - Quick access menu integration
@@ -103,7 +103,7 @@ cargo build --release
 
 ### Persistence
 
-- Executable paths are stored in `exes.txt` in the addon directory
+- Executable paths are stored in `exes.json` in the addon directory (JSON format)
 - Automatic loading and saving of executable lists
 - Settings are saved when modified
 
