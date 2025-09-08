@@ -2,16 +2,6 @@ name: Check
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - src/**
-      - Cargo.toml
-  pull_request:
-    paths:
-      - src/**
-      - Cargo.toml
 
 jobs:
   check:

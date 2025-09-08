@@ -1,13 +1,13 @@
 [package]
-name = "gw2-executable-loader"
-version = "0.1.0"
+name = "gw2_executable_runner"
+version = "0.1.1"
 edition = "2024"
 authors = ["Deathmore.3741"]
-description = "Load and run exe files as subprocesses from inside Gw2. Very useful for SteamOS/Bazzite in game mode as it launches under the same wine binary and prefix as Gw2."
-repository = "https://github.com/OlivierFortier/gw2-executable-loader"
+description = "Run executable files as subprocesses from inside Gw2. Very useful for Linux users as it launches under the same wine binary and prefix as Gw2."
+repository = "https://github.com/OlivierFortier/gw2-executable-runner"
 
 [lib]
-name = "gw2_executable_loader"
+name = "gw2_executable_runner"
 crate-type = ["cdylib"]
 
 [dependencies]

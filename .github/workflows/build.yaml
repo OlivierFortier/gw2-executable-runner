@@ -1,8 +1,11 @@
 name: Build
 
 on:
-  - workflow_dispatch
-  - workflow_call
+  workflow_dispatch:
+  workflow_call:
+  push:
+    tags:
+      - "*"
 
 jobs:
   build:
@@ -16,7 +19,19 @@ jobs:
       - run: cargo build --release
       - uses: actions/upload-artifact@v4
         with:
-          name: gw2-executable-loader
+          name: gw2-executable-runner
           path: |
-            target/x86_64-pc-windows-msvc/release/gw2_executable_loader.dll
-            target/x86_64-pc-windows-msvc/release/gw2_executable_loader.pdb
+            target/x86_64-pc-windows-msvc/release/gw2_executable_runner.dll
+            target/x86_64-pc-windows-msvc/release/gw2_executable_runner.pdb
+      - name: Upload files to a GitHub release
+        uses: svenstaro/upload-release-action@2.11.2
+        with:
+          file: target/x86_64-pc-windows-msvc/release/gw2_executable_runner.dll
+          release_name: Gw2 Executable Runner
+          asset_name: gw2_executable_runner.dll
+          tag: ${{ github.ref }}
+          overwrite: true
+          body: |
+            Run executable files as subprocesses from inside Gw2.
+            Very useful for linux users as it launches under the same wine binary and prefix as Gw2.
+            Simply drop the DLL in your Gw2 addons directory and launch Guild Wars 2 with Nexus enabled.
