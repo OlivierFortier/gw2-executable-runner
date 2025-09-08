@@ -29,7 +29,6 @@ use crate::addon::{NexusError, Result};
  */
 #[derive(Debug)]
 pub struct ExeManager {
-    exe_paths: Vec<String>,
     running_processes: HashMap<String, Child>,
     addon_dir: PathBuf,
     executables: Vec<Executable>,
@@ -39,6 +38,8 @@ pub struct ExeManager {
 pub struct Executable {
     pub path: String,
     pub launch_on_startup: bool,
+    #[serde(skip)]
+    pub is_running: bool,
 }
 
 impl ExeManager {
@@ -53,7 +54,6 @@ impl ExeManager {
      */
     pub fn new(addon_dir: PathBuf) -> Result<Self> {
         let mut manager = Self {
-            exe_paths: Vec::new(),
             running_processes: HashMap::new(),
             addon_dir,
             executables: Vec::new(),
@@ -78,12 +78,18 @@ impl ExeManager {
 
         match read_to_string(&exes_file) {
             Ok(contents) => {
-                self.exe_paths = contents
+                // Initialize the executables vector with default values
+                self.executables = contents
                     .lines()
                     .filter(|line| !line.trim().is_empty())
-                    .map(|line| line.trim().to_string())
+                    .map(|line| Executable {
+                        path: line.trim().to_string(),
+                        launch_on_startup: false,
+                        is_running: false,
+                    })
                     .collect();
-                log::info!("Loaded {} executables from exe list", self.exe_paths.len());
+
+                log::info!("Loaded {} executables from exe list", self.executables.len());
                 Ok(())
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
@@ -108,14 +114,18 @@ impl ExeManager {
         let mut exes_file = self.addon_dir.clone();
         exes_file.push("exes.txt");
 
-        let content = self.exe_paths.join("\n");
+        let content = self.executables
+            .iter()
+            .map(|exe| exe.path.clone())
+            .collect::<Vec<String>>()
+            .join("\n");
         write(&exes_file, content).map_err(|e| {
             let error_msg = format!("Failed to save exe list to {exes_file:?}: {e}");
             log::error!("{error_msg}");
             NexusError::FileOperation(error_msg)
         })?;
 
-        log::debug!("Saved {} executables to exe list", self.exe_paths.len());
+        log::debug!("Saved {} executables to exe list", self.executables.len());
         Ok(())
     }
 
@@ -135,12 +145,16 @@ impl ExeManager {
             ));
         }
 
-        if self.exe_paths.contains(&path) {
+        if self.executables.iter().any(|exe| exe.path == path) {
             log::warn!("Executable path already exists: {path}");
             return Ok(());
         }
 
-        self.exe_paths.push(path.clone());
+        self.executables.push(Executable {
+            path: path.clone(),
+            launch_on_startup: false,
+            is_running: false,
+        });
         self.save_exe_list()?;
         log::info!("Added executable: {path}");
         Ok(())
@@ -156,15 +170,15 @@ impl ExeManager {
      * Returns `NexusError::FileOperation` if the index is invalid or saving fails.
      */
     pub fn remove_exe(&mut self, index: usize) -> Result<()> {
-        if index >= self.exe_paths.len() {
+        if index >= self.executables.len() {
             return Err(NexusError::FileOperation(format!(
                 "Invalid index {} for exe list of length {}",
                 index,
-                self.exe_paths.len()
+                self.executables.len()
             )));
         }
 
-        let path = self.exe_paths.remove(index);
+        let path = self.executables.remove(index).path;
 
         // Kill the process if it's running
         if let Some(mut child) = self.running_processes.remove(&path) {
@@ -198,6 +212,11 @@ impl ExeManager {
             )));
         }
 
+        // Update the is_running flag in the executables vector
+        if let Some(executable) = self.executables.iter_mut().find(|exe| exe.path == path) {
+            executable.is_running = true;
+        }
+
         match Command::new(path)
             .creation_flags(0x08000000)
             .stdout(Stdio::piped())
@@ -210,6 +229,10 @@ impl ExeManager {
                 Ok(())
             }
             Err(e) => {
+                // Reset the is_running flag on failure
+                if let Some(executable) = self.executables.iter_mut().find(|exe| exe.path == path) {
+                    executable.is_running = false;
+                }
                 let error_msg = format!("Failed to launch {path}: {e}");
                 log::error!("{error_msg}");
                 Err(NexusError::ProcessLaunch(error_msg))
@@ -227,6 +250,11 @@ impl ExeManager {
      * Returns `NexusError::ProcessStop` if the process is not running or killing fails.
      */
     pub fn stop_exe(&mut self, path: &str) -> Result<()> {
+        // Reset the is_running flag in the executables vector
+        if let Some(executable) = self.executables.iter_mut().find(|exe| exe.path == path) {
+            executable.is_running = false;
+        }
+
         if let Some(mut child) = self.running_processes.remove(path) {
             match child.kill() {
                 Ok(_) => {
@@ -261,6 +289,10 @@ impl ExeManager {
 
         for path in finished {
             self.running_processes.remove(&path);
+            // Reset the is_running flag in the executables vector
+            if let Some(executable) = self.executables.iter_mut().find(|exe| exe.path == path) {
+                executable.is_running = false;
+            }
             log::info!("Process finished: {path}");
         }
     }
@@ -275,6 +307,13 @@ impl ExeManager {
      * `true` if the process is running, `false` otherwise.
      */
     pub fn is_running(&self, path: &str) -> bool {
+        // First check the executables vector for the is_running flag
+        if let Some(executable) = self.executables.iter().find(|exe| exe.path == path) {
+            if executable.is_running {
+                return true;
+            }
+        }
+        // Fallback to checking the running_processes map
         self.running_processes.contains_key(path)
     }
 
@@ -286,6 +325,11 @@ impl ExeManager {
      */
     pub fn stop_all(&mut self) -> Result<()> {
         let mut errors = Vec::new();
+
+        // Reset all is_running flags in the executables vector
+        for executable in &mut self.executables {
+            executable.is_running = false;
+        }
 
         for (path, mut child) in self.running_processes.drain() {
             if let Err(e) = child.kill() {
@@ -309,16 +353,6 @@ impl ExeManager {
     }
 
     /**
-     * Gets a reference to the exe paths list.
-     *
-     * # Returns
-     * Reference to the vector of executable paths.
-     */
-    pub fn exe_paths(&self) -> &Vec<String> {
-        &self.exe_paths
-    }
-
-    /**
      * Gets the number of running processes.
      *
      * # Returns
@@ -332,8 +366,11 @@ impl ExeManager {
         self.save_exe_list()
     }
 
-    pub(crate) fn launch_on_startup(&self, executable: &mut Executable) -> &mut bool {
-        todo!()
+    pub(crate) fn launch_on_startup(&mut self, index: usize) -> &mut bool {
+        if index >= self.executables.len() {
+            panic!("Index out of bounds: {} >= {}", index, self.executables.len());
+        }
+        &mut self.executables[index].launch_on_startup
     }
 }
 

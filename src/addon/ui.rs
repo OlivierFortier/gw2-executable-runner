@@ -11,7 +11,7 @@ This module contains all Nexus-specific UI rendering logic and components for th
 
 */
 
-use crate::addon::manager::{open_file_dialog, ExeManager, Executable, EXE_MANAGER};
+use crate::addon::manager::{open_file_dialog, ExeManager, EXE_MANAGER};
 use nexus::{
     gui::register_render,
     imgui::{Ui, Window},
@@ -62,8 +62,6 @@ fn render_window_content(ui: &Ui) {
 
 /// Renders the window header
 fn render_header(ui: &Ui) {
-    ui.text("Gw2 Executable Runner");
-    ui.separator();
     ui.text_wrapped("To start an executable, please select an executable file below.");
     ui.text_wrapped("Then, launch executable with the 'Launch' button.");
     ui.text_wrapped("You can make it launch automatically on startup by checking on the checkbox next to the executable.");
@@ -96,27 +94,26 @@ fn render_executable_list(ui: &Ui, exe_manager: &mut ExeManager) {
     let mut to_stop = None;
     let mut to_launch = None;
 
-    // Clone the paths to avoid borrowing issues
-    let exe_paths = exe_manager.exe_paths().clone();
+    // Get the number of executables
+    let exe_count = exe_manager.executables().len();
 
-    if exe_paths.is_empty() {
+    if exe_count == 0 {
         ui.text_colored([0.6, 0.6, 0.6, 1.0], "No executable configured");
     }
 
-    for (i, exe_path) in exe_paths.iter().enumerate() {
-        let is_running = exe_manager.is_running(exe_path);
+    for i in 0..exe_count {
+        let is_running = exe_manager.is_running(&exe_manager.executables()[i].path);
 
         let _id = ui.push_id(i as i32);
 
         render_executable_item(
             exe_manager,
             ui,
-            exe_path,
+            i,
             is_running,
             &mut to_launch,
             &mut to_stop,
             &mut to_remove,
-            i,
         );
     }
 
@@ -128,15 +125,15 @@ fn render_executable_list(ui: &Ui, exe_manager: &mut ExeManager) {
 fn render_executable_item(
     exe_manager: &mut ExeManager,
     ui: &Ui,
-    exe_path: &str,
+    index: usize,
     is_running: bool,
     to_launch: &mut Option<String>,
     to_stop: &mut Option<String>,
     to_remove: &mut Option<usize>,
-    index: usize,
 ) {
-
-    let exe: &Executable = exe_manager.executables().get(index).unwrap();
+    // Get the executable path and launch_on_startup flag at the given index
+    let exe_path = exe_manager.executables()[index].path.clone();
+    let launch_on_startup_flag = exe_manager.executables()[index].launch_on_startup;
 
     // Status indicator
     if is_running {
@@ -150,14 +147,17 @@ fn render_executable_item(
     let display_path = if exe_path.len() > 50 {
         format!("...{}", &exe_path[exe_path.len() - 47..])
     } else {
-        exe_path.to_string()
+        exe_path.clone()
     };
     ui.text(&display_path);
 
     ui.same_line();
 
-    // Auto-launch checkbox
-    if ui.checkbox("Launch on startup", exe_manager.launch_on_startup(&exe)) {
+    // We need to work with a mutable reference to the launch_on_startup flag
+    let mut launch_on_startup = launch_on_startup_flag;
+    if ui.checkbox("Launch on startup", &mut launch_on_startup) {
+        // Update the actual flag in the exe_manager
+        *exe_manager.launch_on_startup(index) = launch_on_startup;
         if let Err(e) = exe_manager.save_settings() {
             log::error!("Failed to save settings: {e}");
         }
@@ -166,10 +166,10 @@ fn render_executable_item(
     // Launch/Stop button
     if is_running {
         if ui.button("Stop") {
-            *to_stop = Some(exe_path.to_string());
+            *to_stop = Some(exe_path.clone());
         }
     } else if ui.button("Launch") {
-        *to_launch = Some(exe_path.to_string());
+        *to_launch = Some(exe_path.clone());
     }
 
     ui.same_line();
