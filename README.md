@@ -17,7 +17,6 @@ A Rust-based executable runner for Nexus, designed to work with Blish HUD and ot
 │       ├── mod.rs       # Addon module definitions
 │       └── ui.rs        # UI integration for addons
 ├── images/              # Project images and icons
-└── target/              # Build output
 ```
 
 ## Usage
