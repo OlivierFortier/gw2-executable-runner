@@ -57,7 +57,9 @@ impl ExeManager {
         Ok(manager)
     }
 
-    pub fn executables(&self) -> &Vec<Executable> { &self.executables }
+    pub fn executables(&self) -> &Vec<Executable> {
+        &self.executables
+    }
 
     /// Loads the executable list from the exes.json file in the addon directory.
     ///
@@ -67,7 +69,7 @@ impl ExeManager {
         let mut exes_file = self.addon_dir.clone();
         exes_file.push("exes.json");
 
-    match read_to_string(&exes_file) {
+        match read_to_string(&exes_file) {
             Ok(contents) => match serde_json::from_str(&contents) {
                 Ok(executables) => {
                     self.executables = executables;
@@ -260,11 +262,11 @@ impl ExeManager {
         }
 
         if let Some(mut child) = self.running_processes.remove(path) {
-        match child.kill() {
+            match child.kill() {
                 Ok(_) => {
                     log::info!("Stopped executable: {path}");
-            // Best-effort wait to reap handle
-            let _ = child.wait();
+                    // Best-effort wait to reap handle
+                    let _ = child.wait();
                     Ok(())
                 }
                 Err(e) => {
@@ -346,7 +348,7 @@ impl ExeManager {
             "Starting to stop {} running processes",
             self.running_processes.len()
         );
-    for (path, mut child) in self.running_processes.drain() {
+        for (path, mut child) in self.running_processes.drain() {
             log::info!(
                 "Attempting to stop process for path: '{}' with PID: {}",
                 path,

@@ -11,7 +11,7 @@ This module contains all Nexus-specific UI rendering logic and components for th
 
 */
 
-use crate::addon::manager::{open_file_dialog, ExeManager, EXE_MANAGER};
+use crate::addon::manager::{EXE_MANAGER, ExeManager, open_file_dialog};
 use nexus::{
     gui::register_render,
     imgui::{Ui, Window},
@@ -228,13 +228,24 @@ pub fn toggle_window() {
 
 /// Utility: truncate a long string keeping start and end with ellipsis in the middle
 fn truncate_middle(s: &str, max_len: usize) -> String {
-    if s.chars().count() <= max_len { return s.to_string(); }
-    if max_len <= 3 { return "...".to_string(); }
+    if s.chars().count() <= max_len {
+        return s.to_string();
+    }
+    if max_len <= 3 {
+        return "...".to_string();
+    }
     let keep = max_len - 3;
     let head = keep / 2;
     let tail = keep - head;
     let mut chars = s.chars();
     let start: String = chars.by_ref().take(head).collect();
-    let end: String = s.chars().rev().take(tail).collect::<String>().chars().rev().collect();
+    let end: String = s
+        .chars()
+        .rev()
+        .take(tail)
+        .collect::<String>()
+        .chars()
+        .rev()
+        .collect();
     format!("{}...{}", start, end)
 }
