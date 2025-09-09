@@ -22,14 +22,13 @@ pub fn load() {
     log::info!("Loading Gw2 Executable Runner addon");
 
     if let Err(e) = init_addon() {
-        log::error!("Failed to initialize nexus addon: {e}");
+        log::error!("Failed to initialize Gw2 Executable Runner: {e}");
         return;
     }
 
     log::info!("Gw2 Executable Runner addon loaded successfully");
 }
 
-/// Internal initialization function with proper error handling
 fn init_addon() -> Result<()> {
     // Initialize the nexus menus and options
     // Create the addon dir if it doesn't exist
@@ -52,17 +51,38 @@ fn init_addon() -> Result<()> {
             NexusError::ManagerInitialization("Failed to set global exe manager".to_string())
         })?;
 
-    // Load textures for the addon
     load_addon_textures()?;
-
-    // Setup quick access menu
     setup_quick_access()?;
-
-    // Setup keybinds
     setup_keybinds()?;
-
-    // Setup UI rendering
     ui::setup_main_window_rendering();
+
+    // Launch executables that should start on addon load
+    let exe_manager_arc =
+        crate::addon::manager::EXE_MANAGER
+            .get()
+            .ok_or(NexusError::ManagerInitialization(
+                "EXE_MANAGER not set during init".to_string(),
+            ))?;
+    let mut exe_manager = exe_manager_arc.lock().map_err(|e| {
+        NexusError::ManagerInitialization(format!(
+            "Failed to lock exe manager during startup launch: {e}"
+        ))
+    })?;
+
+    let paths_to_launch: Vec<String> = exe_manager
+        .executables()
+        .iter()
+        .filter(|exe| exe.launch_on_startup && !exe.is_running)
+        .map(|exe| exe.path.clone())
+        .collect();
+
+    for path in paths_to_launch {
+        if let Err(e) = exe_manager.launch_exe(&path) {
+            log::warn!("Failed to launch startup executable {}: {}", path, e);
+        } else {
+            log::info!("Launched startup executable: {}", path);
+        }
+    }
 
     Ok(())
 }
@@ -76,8 +96,6 @@ fn load_addon_textures() -> Result<()> {
         log::info!("texture {id} loaded");
     });
 
-    // Note: load_texture_from_memory doesn't return a Result, so we assume success
-    // In a real implementation, we might want to add validation
     load_texture_from_memory("GW2_EXECUTABLE_RUNNER_ICON", icon, Some(receive_texture));
     load_texture_from_memory(
         "GW2_EXECUTABLE_RUNNER_ICON_HOVER",
@@ -89,10 +107,7 @@ fn load_addon_textures() -> Result<()> {
     Ok(())
 }
 
-/// Sets up the quick access menu entry
 fn setup_quick_access() -> Result<()> {
-    // Note: add_quick_access doesn't return a Result, so we assume success
-    // In a real implementation, we might want to add validation
     add_quick_access(
         "GW2_EXECUTABLE_RUNNER_SHORTCUT",
         "GW2_EXECUTABLE_RUNNER_ICON",
@@ -106,7 +121,6 @@ fn setup_quick_access() -> Result<()> {
     Ok(())
 }
 
-/// Sets up the keybind handlers
 fn setup_keybinds() -> Result<()> {
     let main_window_keybind_handler = keybind_handler!(|id, is_release| {
         log::info!(
@@ -118,8 +132,6 @@ fn setup_keybinds() -> Result<()> {
         }
     });
 
-    // Note: register_keybind_with_string doesn't return a Result, so we assume success
-    // In a real implementation, we might want to add validation
     register_keybind_with_string(
         "GW2_EXECUTABLE_RUNNER_KEYBIND",
         main_window_keybind_handler,
@@ -131,29 +143,25 @@ fn setup_keybinds() -> Result<()> {
     Ok(())
 }
 
-/// Nexus addon unload function - handles cleanup of all nexus-specific functionality
 pub fn unload() {
-    log::info!("Unloading Gw2 executable runner addon");
+    log::info!("Unloading Gw2 executable runner");
 
-    if let Err(e) = cleanup_addon() {
-        log::error!("Error during nexus addon cleanup: {e}");
+    if let Err(e) = (|| -> Result<()> {
+        // Stop all running executables before unloading
+        if let Some(exe_manager_arc) = crate::addon::manager::EXE_MANAGER.get() {
+            let mut exe_manager = exe_manager_arc.lock().map_err(|e| {
+                NexusError::ManagerInitialization(format!(
+                    "Failed to lock exe manager during cleanup: {e}"
+                ))
+            })?;
+            exe_manager.stop_all()?;
+        }
+
+        log::info!("Gw2 executable runner cleanup completed successfully");
+        Ok(())
+    })() {
+        log::error!("Error during gw2 executable runner cleanup: {e}");
     }
 
-    log::info!("Gw2 executable runner addon unloaded");
-}
-
-/// Internal cleanup function with proper error handling
-fn cleanup_addon() -> Result<()> {
-    // Stop all running executables before unloading
-    if let Some(exe_manager_arc) = crate::addon::manager::EXE_MANAGER.get() {
-        let mut exe_manager = exe_manager_arc.lock().map_err(|e| {
-            NexusError::ManagerInitialization(format!(
-                "Failed to lock exe manager during cleanup: {e}"
-            ))
-        })?;
-        exe_manager.stop_all()?;
-    }
-
-    log::info!("Nexus addon cleanup completed successfully");
-    Ok(())
+    log::info!("Gw2 executable runner unloaded");
 }

@@ -11,7 +11,7 @@ This module contains all Nexus-specific UI rendering logic and components for th
 
 */
 
-use crate::addon::manager::{open_file_dialog, ExeManager, EXE_MANAGER};
+use crate::addon::manager::{EXE_MANAGER, ExeManager, open_file_dialog};
 use nexus::{
     gui::register_render,
     imgui::{Ui, Window},
@@ -56,7 +56,7 @@ fn render_window_content(ui: &Ui) {
         render_header(ui);
         render_add_executable_section(ui, &mut exe_manager);
         render_executable_list(ui, &mut exe_manager);
-        render_control_buttons(ui, &exe_manager);
+    render_control_buttons(ui, &mut exe_manager);
     }
 }
 
@@ -81,7 +81,7 @@ fn render_add_executable_section(ui: &Ui, exe_manager: &mut ExeManager) {
     }
 
     ui.same_line();
-    ui.text("Click 'Browse' to select an executable file");
+    ui.text_wrapped("Click 'Browse' to select an executable file");
     ui.separator();
 }
 
@@ -149,7 +149,7 @@ fn render_executable_item(
     } else {
         exe_path.clone()
     };
-    ui.text(&display_path);
+    ui.text_wrapped(&display_path);
 
     ui.same_line();
 
@@ -162,6 +162,8 @@ fn render_executable_item(
             log::error!("Failed to save settings: {e}");
         }
     }
+
+    ui.same_line();
 
     // Launch/Stop button
     if is_running {
@@ -207,15 +209,12 @@ fn handle_executable_actions(
 }
 
 /// Renders the control buttons section
-fn render_control_buttons(ui: &Ui, exe_manager: &ExeManager) {
+fn render_control_buttons(ui: &Ui, exe_manager: &mut ExeManager) {
     ui.separator();
 
     if ui.button("Stop All") {
-        if let Some(exe_manager_arc) = EXE_MANAGER.get() {
-            let mut exe_manager = exe_manager_arc.lock().unwrap();
-            if let Err(e) = exe_manager.stop_all() {
-                log::error!("Failed to stop all executables: {e}");
-            }
+        if let Err(e) = exe_manager.stop_all() {
+            log::error!("Failed to stop all executables: {e}");
         }
     }
 

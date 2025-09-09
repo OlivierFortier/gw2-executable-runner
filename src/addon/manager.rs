@@ -22,7 +22,7 @@ use serde::{Deserialize, Serialize};
 use crate::addon::{NexusError, Result};
 
 /// Stores a list of executable paths, tracks running processes, and provides methods for launching, stopping,
-/// and cleaning up executables. All operations return a `Result<T, NexusError>` for robust error handling.
+/// and cleaning up executables. All operations return a `Result<T, NexusError>`.
 /// Executable list is persisted in JSON format in the addon directory.
 #[derive(Debug)]
 pub struct ExeManager {
@@ -70,20 +70,21 @@ impl ExeManager {
         exes_file.push("exes.json");
 
         match read_to_string(&exes_file) {
-            Ok(contents) => {
-                match serde_json::from_str(&contents) {
-                    Ok(executables) => {
-                        self.executables = executables;
-                        log::info!("Loaded {} executables from exe list", self.executables.len());
-                        Ok(())
-                    }
-                    Err(e) => {
-                        let error_msg = format!("Failed to parse exe list from {:?}: {}", exes_file, e);
-                        log::error!("{}", error_msg);
-                        Err(NexusError::FileOperation(error_msg))
-                    }
+            Ok(contents) => match serde_json::from_str(&contents) {
+                Ok(executables) => {
+                    self.executables = executables;
+                    log::info!(
+                        "Loaded {} executables from exe list",
+                        self.executables.len()
+                    );
+                    Ok(())
                 }
-            }
+                Err(e) => {
+                    let error_msg = format!("Failed to parse exe list from {:?}: {}", exes_file, e);
+                    log::error!("{}", error_msg);
+                    Err(NexusError::FileOperation(error_msg))
+                }
+            },
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 log::info!("No existing exe list found, starting with empty list");
                 Ok(())
@@ -320,19 +321,24 @@ impl ExeManager {
         let mut errors = Vec::new();
 
         // Reset all is_running flags in the executables vector
+        log::info!("Resetting is_running flags for all {} executables", self.executables.len());
         for executable in &mut self.executables {
             executable.is_running = false;
         }
+        log::info!("Finished resetting is_running flags");
 
+        log::info!("Starting to stop {} running processes", self.running_processes.len());
         for (path, mut child) in self.running_processes.drain() {
+            log::info!("Attempting to stop process for path: '{}' with PID: {}", path, child.id());
             if let Err(e) = child.kill() {
                 let error_msg = format!("Failed to stop {path}: {e}");
-                log::error!("{error_msg}");
+                log::error!("{error_msg} (PID: {})", child.id());
                 errors.push(error_msg);
             } else {
-                log::info!("Stopped executable: {path}");
+                log::info!("Successfully stopped executable: '{}' (PID: {})", path, child.id());
             }
         }
+        log::info!("Finished stopping all processes");
 
         if !errors.is_empty() {
             return Err(NexusError::ProcessStop(format!(
@@ -361,7 +367,11 @@ impl ExeManager {
 
     pub(crate) fn launch_on_startup(&mut self, index: usize) -> &mut bool {
         if index >= self.executables.len() {
-            panic!("Index out of bounds: {} >= {}", index, self.executables.len());
+            panic!(
+                "Index out of bounds: {} >= {}",
+                index,
+                self.executables.len()
+            );
         }
         &mut self.executables[index].launch_on_startup
     }
