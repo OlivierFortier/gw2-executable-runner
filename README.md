@@ -1,6 +1,6 @@
 # GW2 Executable Runner
 
-A Rust-based executable runner for Nexus, designed to work with Blish HUD and other similar tools. This project allows dynamic running and management of executables from the Guild Wars 2 environment in an easy way. It is particularly useful for linux users who want to run custom addons or tools alongside the game.
+A Linux-compatible executable runner for Nexus, designed to work with Blish HUD and other similar tools. This project allows dynamic running and management of executables from the Guild Wars 2 environment in an easy way. It is particularly useful for linux users who want to run custom addons or tools alongside the game.
 
 ## Linux info
 Starting executables this way will start them in the same wine prefix as the game, using the same wine binary as the game.
