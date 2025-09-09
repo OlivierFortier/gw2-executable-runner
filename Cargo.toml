@@ -1,6 +1,6 @@
 [package]
 name = "gw2_executable_runner"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 authors = ["Deathmore.3741"]
 description = "Run executable files from inside Gw2. Very useful for Linux users as it launches under the same wine binary and prefix as Gw2."
