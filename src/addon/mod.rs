@@ -1,6 +1,4 @@
 /*!
-# Nexus Addon Module
-
 ## Error Handling
 
 All errors across Nexus modules use the [NexusError] enum for consistent propagation and logging.

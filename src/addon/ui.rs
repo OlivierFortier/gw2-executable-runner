@@ -11,7 +11,7 @@ This module contains all Nexus-specific UI rendering logic and components for th
 
 */
 
-use crate::addon::manager::{EXE_MANAGER, ExeManager, open_file_dialog};
+use crate::addon::manager::{open_file_dialog, ExeManager, EXE_MANAGER};
 use nexus::{
     gui::register_render,
     imgui::{Ui, Window},
@@ -48,7 +48,10 @@ pub fn render_main_window(ui: &Ui) {
 /// Renders the content inside the main window
 fn render_window_content(ui: &Ui) {
     if let Some(exe_manager_arc) = EXE_MANAGER.get() {
-        let mut exe_manager = exe_manager_arc.lock().unwrap();
+        let Ok(mut exe_manager) = exe_manager_arc.lock() else {
+            ui.text_colored([1.0, 0.2, 0.2, 1.0], "Failed to acquire manager lock");
+            return;
+        };
 
         // Cleanup finished processes
         exe_manager.cleanup_finished_processes();
@@ -56,7 +59,7 @@ fn render_window_content(ui: &Ui) {
         render_header(ui);
         render_add_executable_section(ui, &mut exe_manager);
         render_executable_list(ui, &mut exe_manager);
-    render_control_buttons(ui, &mut exe_manager);
+        render_control_buttons(ui, &mut exe_manager);
     }
 }
 
@@ -144,11 +147,7 @@ fn render_executable_item(
     ui.same_line();
 
     // Executable path (truncated if too long)
-    let display_path = if exe_path.len() > 50 {
-        format!("...{}", &exe_path[exe_path.len() - 47..])
-    } else {
-        exe_path.clone()
-    };
+    let display_path = truncate_middle(&exe_path, 50);
     ui.text_wrapped(&display_path);
 
     ui.same_line();
@@ -156,10 +155,8 @@ fn render_executable_item(
     // We need to work with a mutable reference to the launch_on_startup flag
     let mut launch_on_startup = launch_on_startup_flag;
     if ui.checkbox("Launch on startup", &mut launch_on_startup) {
-        // Update the actual flag in the exe_manager
-        *exe_manager.launch_on_startup(index) = launch_on_startup;
-        if let Err(e) = exe_manager.save_settings() {
-            log::error!("Failed to save settings: {e}");
+        if let Err(e) = exe_manager.set_launch_on_startup(index, launch_on_startup) {
+            log::error!("Failed to update setting: {e}");
         }
     }
 
@@ -227,4 +224,17 @@ fn render_control_buttons(ui: &Ui, exe_manager: &mut ExeManager) {
 /// Toggles the main window visibility
 pub fn toggle_window() {
     IS_WINDOW_OPEN.store(!IS_WINDOW_OPEN.load(Ordering::Relaxed), Ordering::Relaxed);
+}
+
+/// Utility: truncate a long string keeping start and end with ellipsis in the middle
+fn truncate_middle(s: &str, max_len: usize) -> String {
+    if s.chars().count() <= max_len { return s.to_string(); }
+    if max_len <= 3 { return "...".to_string(); }
+    let keep = max_len - 3;
+    let head = keep / 2;
+    let tail = keep - head;
+    let mut chars = s.chars();
+    let start: String = chars.by_ref().take(head).collect();
+    let end: String = s.chars().rev().take(tail).collect::<String>().chars().rev().collect();
+    format!("{}...{}", start, end)
 }

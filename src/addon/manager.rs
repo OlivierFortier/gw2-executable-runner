@@ -57,9 +57,7 @@ impl ExeManager {
         Ok(manager)
     }
 
-    pub fn executables(&self) -> &Vec<Executable> {
-        &self.executables
-    }
+    pub fn executables(&self) -> &Vec<Executable> { &self.executables }
 
     /// Loads the executable list from the exes.json file in the addon directory.
     ///
@@ -69,7 +67,7 @@ impl ExeManager {
         let mut exes_file = self.addon_dir.clone();
         exes_file.push("exes.json");
 
-        match read_to_string(&exes_file) {
+    match read_to_string(&exes_file) {
             Ok(contents) => match serde_json::from_str(&contents) {
                 Ok(executables) => {
                     self.executables = executables;
@@ -137,6 +135,15 @@ impl ExeManager {
             return Err(NexusError::FileOperation(
                 "Cannot add empty executable path".to_string(),
             ));
+        }
+
+        // Basic validation: path exists and is a file
+        let pb = PathBuf::from(&path);
+        if !pb.exists() || !pb.is_file() {
+            return Err(NexusError::FileOperation(format!(
+                "Executable path does not exist or is not a file: {}",
+                path
+            )));
         }
 
         if self.executables.iter().any(|exe| exe.path == path) {
@@ -211,10 +218,13 @@ impl ExeManager {
             executable.is_running = true;
         }
 
+        // CREATE_NO_WINDOW | DETACHED_PROCESS to avoid inheriting console
+        const CREATE_NO_WINDOW: u32 = 0x08000000;
+        const DETACHED_PROCESS: u32 = 0x00000008;
         match Command::new(path)
-            .creation_flags(0x08000000)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
+            .creation_flags(CREATE_NO_WINDOW | DETACHED_PROCESS)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .spawn()
         {
             Ok(child) => {
@@ -250,9 +260,11 @@ impl ExeManager {
         }
 
         if let Some(mut child) = self.running_processes.remove(path) {
-            match child.kill() {
+        match child.kill() {
                 Ok(_) => {
                     log::info!("Stopped executable: {path}");
+            // Best-effort wait to reap handle
+            let _ = child.wait();
                     Ok(())
                 }
                 Err(e) => {
@@ -321,21 +333,36 @@ impl ExeManager {
         let mut errors = Vec::new();
 
         // Reset all is_running flags in the executables vector
-        log::info!("Resetting is_running flags for all {} executables", self.executables.len());
+        log::info!(
+            "Resetting is_running flags for all {} executables",
+            self.executables.len()
+        );
         for executable in &mut self.executables {
             executable.is_running = false;
         }
         log::info!("Finished resetting is_running flags");
 
-        log::info!("Starting to stop {} running processes", self.running_processes.len());
-        for (path, mut child) in self.running_processes.drain() {
-            log::info!("Attempting to stop process for path: '{}' with PID: {}", path, child.id());
+        log::info!(
+            "Starting to stop {} running processes",
+            self.running_processes.len()
+        );
+    for (path, mut child) in self.running_processes.drain() {
+            log::info!(
+                "Attempting to stop process for path: '{}' with PID: {}",
+                path,
+                child.id()
+            );
             if let Err(e) = child.kill() {
                 let error_msg = format!("Failed to stop {path}: {e}");
                 log::error!("{error_msg} (PID: {})", child.id());
                 errors.push(error_msg);
             } else {
-                log::info!("Successfully stopped executable: '{}' (PID: {})", path, child.id());
+                log::info!(
+                    "Successfully stopped executable: '{}' (PID: {})",
+                    path,
+                    child.id()
+                );
+                let _ = child.wait();
             }
         }
         log::info!("Finished stopping all processes");
@@ -361,19 +388,18 @@ impl ExeManager {
         self.running_processes.len()
     }
 
-    pub(crate) fn save_settings(&self) -> Result<()> {
-        self.save_exe_list()
-    }
+    // Additional settings helpers
 
-    pub(crate) fn launch_on_startup(&mut self, index: usize) -> &mut bool {
+    pub(crate) fn set_launch_on_startup(&mut self, index: usize, value: bool) -> Result<()> {
         if index >= self.executables.len() {
-            panic!(
+            return Err(NexusError::FileOperation(format!(
                 "Index out of bounds: {} >= {}",
                 index,
                 self.executables.len()
-            );
+            )));
         }
-        &mut self.executables[index].launch_on_startup
+        self.executables[index].launch_on_startup = value;
+        self.save_exe_list()
     }
 }
 

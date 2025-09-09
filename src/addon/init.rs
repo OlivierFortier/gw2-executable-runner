@@ -44,12 +44,12 @@ fn init_addon() -> Result<()> {
 
     // Initialize the exe manager
     let exe_manager = std::sync::Arc::new(std::sync::Mutex::new(ExeManager::new(addon_dir)?));
-
-    crate::addon::manager::EXE_MANAGER
-        .set(exe_manager.clone())
-        .map_err(|_| {
-            NexusError::ManagerInitialization("Failed to set global exe manager".to_string())
-        })?;
+    // Set the global manager if not already set
+    if let Err(_) = crate::addon::manager::EXE_MANAGER.set(exe_manager.clone()) {
+        return Err(NexusError::ManagerInitialization(
+            "Global exe manager already initialized".to_string(),
+        ));
+    }
 
     load_addon_textures()?;
     setup_quick_access()?;
@@ -149,12 +149,14 @@ pub fn unload() {
     if let Err(e) = (|| -> Result<()> {
         // Stop all running executables before unloading
         if let Some(exe_manager_arc) = crate::addon::manager::EXE_MANAGER.get() {
-            let mut exe_manager = exe_manager_arc.lock().map_err(|e| {
-                NexusError::ManagerInitialization(format!(
-                    "Failed to lock exe manager during cleanup: {e}"
-                ))
-            })?;
-            exe_manager.stop_all()?;
+            match exe_manager_arc.lock() {
+                Ok(mut exe_manager) => {
+                    exe_manager.stop_all()?;
+                }
+                Err(e) => {
+                    log::error!("Failed to lock exe manager during cleanup: {e}");
+                }
+            }
         }
 
         log::info!("Gw2 executable runner cleanup completed successfully");
